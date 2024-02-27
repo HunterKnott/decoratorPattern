@@ -10,15 +10,6 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Controller {
-	private static void printMenu() {
-		System.out.println("Output Decorator Options:\n"
-				+ " (1) Bracket Decorator\n"
-				+ " (2) Numbered Decorator\n"
-				+ " (3) Tee Decorator\n"
-				+ " (4) Filter Decorator\n"
-				+ " (5) Quit\n");
-	}
-	
 	private static void readFile(InputStream name) {
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(name))) {
 			String line;
@@ -40,12 +31,14 @@ public class Controller {
 
 		@Override
 		public void write(Object o) {
-			
-			
+			super.so.write("[" + o.toString() + "]\n");
 		}
 	}
 	
+	// NumberedOutput: this precedes each write with the current line number (1-based) right justified
+	// in a field of width 5, followed by a colon and a space. (Don’t add a newline.)
 	class NumberedOutput extends OutputDecorator {
+		private int lineNumber = 1;
 		
 		public NumberedOutput(Writer stream) {
 			super(stream);
@@ -53,22 +46,34 @@ public class Controller {
 		
 		@Override
 		public void write(Object o) {
-			
+			super.so.write(String.format("%5d: %s", lineNumber++, o.toString()));
 		}
 	}
 	
 	// TeeOutput: writes to two streams at a time; the one it wraps, plus one it receives as a
 	// constructor argument
 	class TeeOutput extends OutputDecorator {
+		private final Writer secondStream;
+		String otherName = "output2.txt";
 		
-		public TeeOutput(Writer stream) {
+		public TeeOutput(Writer stream) throws IOException {
 			super(stream);
+			secondStream = new FileWriter(otherName);
 		}
 		
 		@Override
 		public void write(Object o) {
-			
+			super.so.write(o.toString());
+			try {
+				secondStream.write(o.toString());
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
 		}
+	}
+	
+	public interface predicate {
+		public boolean execute(Object o);
 	}
 	
 	// NumberedOutput: this precedes each write with the current line number (1-based) right justified
@@ -104,7 +109,13 @@ public class Controller {
 			
 			while (true) {
 				OutputDecorator dec = null;
-				printMenu();
+				
+				System.out.println("Output Decorator Options:\n"
+						+ " (1) Bracket Decorator\n"
+						+ " (2) Numbered Decorator\n"
+						+ " (3) Tee Decorator\n"
+						+ " (4) Filter Decorator\n"
+						+ " (5) Quit\n");
 				System.out.print("Select an option: ");
 				String choice = scanner.readLine();
 				
@@ -125,6 +136,8 @@ public class Controller {
 					default:
 						System.out.println("Input invalid. Enter a number between 1 and 5");
 				}
+				
+				// Add in decorator to some sequence
 			}
 		} catch (IOException e) {
 			System.err.println("Error reading input: " + e.getMessage());
