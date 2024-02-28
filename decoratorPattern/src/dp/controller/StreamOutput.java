@@ -8,7 +8,7 @@ class StreamOutput implements Output {
 		sink = stream;
 	}
  
-	public void write(Object o) {
+	public void write(Object o) throws IOException {
 		try {
 			sink.write(o.toString());
 		}

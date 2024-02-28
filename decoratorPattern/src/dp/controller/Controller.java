@@ -6,20 +6,20 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class Controller {
-	private static void readFile(InputStream name) {
+	private static String readFile(InputStream name) {
+		StringBuilder stringBuilder = new StringBuilder();
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(name))) {
 			String line;
-			ArrayList<String> lines = new ArrayList<>();
 			while ((line = reader.readLine()) != null) {
-				System.out.println(line);
+				stringBuilder.append(line).append("\n");
 			}
 		} catch (IOException e) {
 			System.err.println("Error reading the file: " + e.getMessage());
 		}
+		return stringBuilder.toString();
 	}
 	
 	// BracketOutput: Surrounds each line with square brackets, and adds a newline to each.
@@ -31,7 +31,11 @@ public class Controller {
 
 		@Override
 		public void write(Object o) {
-			super.so.write("[" + o.toString() + "]\n");
+			try {
+				super.so.write("[" + o.toString() + "]\n");
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
@@ -46,7 +50,11 @@ public class Controller {
 		
 		@Override
 		public void write(Object o) {
-			super.so.write(String.format("%5d: %s", lineNumber++, o.toString()));
+			try {
+				super.so.write(String.format("%5d: %s", lineNumber++, o.toString()));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
@@ -54,16 +62,19 @@ public class Controller {
 	// constructor argument
 	class TeeOutput extends OutputDecorator {
 		private final Writer secondStream;
-		String otherName = "output2.txt";
 		
-		public TeeOutput(Writer stream) throws IOException {
+		public TeeOutput(Writer stream, String otherName) throws IOException {
 			super(stream);
 			secondStream = new FileWriter(otherName);
 		}
 		
 		@Override
 		public void write(Object o) {
-			super.so.write(o.toString());
+			try {
+				super.so.write(o.toString());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 			try {
 				secondStream.write(o.toString());
 			} catch (IOException e) {
@@ -92,52 +103,63 @@ public class Controller {
 	
 	public void run() {
 		try (BufferedReader scanner = new BufferedReader(new InputStreamReader(System.in))) {
-			System.out.print("Enter a file to read: ");
-			String fileName = scanner.readLine();
-			
-			InputStream inputStream = Controller.class.getResourceAsStream(fileName);
-			if (inputStream != null) { // Eventually move this to after the decorators are chosen
-				System.out.println("Reading file " + fileName);
-				readFile(inputStream);
-			} else {
-				System.out.println("No such file named " + fileName);
-				return;
-			}
-			
-			Writer outputStream = new FileWriter("output.txt");
+			Writer outputStream = new FileWriter("output.dat");
 			StreamOutput streamOutput = new StreamOutput(outputStream);
 			
+//			System.out.print("Test: ");
+//			String testText = scanner.readLine();
+//			scanner.close();
+			
+			List<OutputDecorator> decorators = new ArrayList<>();
+			
 			while (true) {
-				OutputDecorator dec = null;
-				
 				System.out.println("Output Decorator Options:\n"
 						+ " (1) Bracket Decorator\n"
 						+ " (2) Numbered Decorator\n"
 						+ " (3) Tee Decorator\n"
 						+ " (4) Filter Decorator\n"
-						+ " (5) Quit\n");
+						+ " (5) Apply\n");
 				System.out.print("Select an option: ");
 				String choice = scanner.readLine();
 				
 				switch (choice) {
 					case "1":
-						dec = new BracketOutput(outputStream);
+						streamOutput = new BracketOutput(outputStream);
+						break;
 					case "2":
-						dec = new NumberedOutput(outputStream);
+						streamOutput = new NumberedOutput(outputStream);
+						break;
 					case "3":
-						dec = new TeeOutput(outputStream);
+						System.out.print("Give a file name for output to go: ");
+						String newFile = scanner.readLine();
+						streamOutput = new TeeOutput(outputStream, newFile);
+						break;
 					case "4":
-						dec = new FilterOutput(outputStream);
+						streamOutput = new FilterOutput(outputStream);
+						break;
 					case "5":
-						System.out.println("Quitting...");
-						scanner.close();
-						outputStream.close();
+						System.out.println("Applying...");
+						
+						System.out.print("Enter a file to read: ");
+						String fileName = scanner.readLine();
+						
+						InputStream inputStream = Controller.class.getResourceAsStream(fileName);
+						if (inputStream != null) {
+							System.out.println("Reading file " + fileName);
+							String text = readFile(inputStream);
+							System.out.println(text);
+							streamOutput.write(text);
+							scanner.close();
+							outputStream.close();
+						} else {
+							System.out.println("No such file named " + fileName);
+							return;
+						}
+						
 						return;
 					default:
 						System.out.println("Input invalid. Enter a number between 1 and 5");
 				}
-				
-				// Add in decorator to some sequence
 			}
 		} catch (IOException e) {
 			System.err.println("Error reading input: " + e.getMessage());
