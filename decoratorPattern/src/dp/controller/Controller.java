@@ -1,10 +1,5 @@
 package dp.controller;
-import java.io.BufferedReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Writer;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -25,9 +20,10 @@ public class Controller {
 	
 	// BracketOutput: Surrounds each line with square brackets, and adds a newline to each.
 	class BracketOutput extends OutputDecorator {
+		private static Writer so;
 
-		public BracketOutput(Writer stream) {
-			super(stream);
+		public BracketOutput(StreamOutput streamOutput) {
+			super(so);
 		}
 
 		@Override
@@ -47,11 +43,14 @@ public class Controller {
 	// NumberedOutput: this precedes each write with the current line number (1-based) right justified
 	// in a field of width 5, followed by a colon and a space. (Don’t add a newline.)
 	class NumberedOutput extends OutputDecorator {
+		private static Writer so;
+		
+		public NumberedOutput(StreamOutput streamOutput) {
+			super(so);
+		}
+
 		private int lineNumber = 1;
 		
-		public NumberedOutput(Writer stream) {
-			super(stream);
-		}
 		
 		@Override
 		public void write(Object o) {
@@ -70,10 +69,11 @@ public class Controller {
 	// TeeOutput: writes to two streams at a time; the one it wraps, plus one it receives as a
 	// constructor argument
 	class TeeOutput extends OutputDecorator {
+		private static Writer  so;
 		private final Writer teeStream;
 		
-		public TeeOutput(Writer stream, Writer teeStream) throws IOException {
-			super(stream);
+		public TeeOutput(StreamOutput streamOutput, Writer teeStream) throws IOException {
+			super(so);
 			this.teeStream = teeStream;
 		}
 		
@@ -100,10 +100,11 @@ public class Controller {
 	// NumberedOutput: this precedes each write with the current line number (1-based) right justified
 	// in a field of width 5, followed by a colon and a space. (Don’t add a newline.)
 	class FilterOutput extends OutputDecorator {
+		private static Writer so;
 		private final Predicate<Object> predicate;
 		
-		public FilterOutput(Writer stream, Predicate<Object> predicate) {
-			super(stream);
+		public FilterOutput(StreamOutput streamOutput, Predicate<Object> predicate) {
+			super(so);
 			this.predicate = predicate;
 		}
 		
@@ -122,8 +123,12 @@ public class Controller {
 	
 	public void run() {
 		try (BufferedReader scanner = new BufferedReader(new InputStreamReader(System.in))) {
-			Writer outputStream = new FileWriter("output.dat");
-			StreamOutput streamOutput = new StreamOutput(outputStream);
+			FileWriter outputStream = new FileWriter("output.dat");
+			
+	        StringWriter stringWriter = new StringWriter();
+	        
+//	        StreamOutput streamOutput = new StreamOutput(outputStream);
+	        StreamOutput streamOutput = new StreamOutput(stringWriter);
 			
 			List<OutputDecorator> decorators = new ArrayList<>();
 			
@@ -139,16 +144,16 @@ public class Controller {
 				
 				switch (choice) {
 					case "1":
-						streamOutput = new BracketOutput(outputStream);
+						streamOutput = new BracketOutput(streamOutput);
 						break;
 					case "2":
-						streamOutput = new NumberedOutput(outputStream);
+						streamOutput = new NumberedOutput(streamOutput);
 						break;
 					case "3":
 						System.out.print("Give a file name for output to go: ");
 						String newFile = scanner.readLine();
 						FileWriter teeFileWriter = new FileWriter(newFile);
-						streamOutput = new TeeOutput(outputStream, teeFileWriter);
+						streamOutput = new TeeOutput(streamOutput, teeFileWriter);
 						break;
 					case "4":
 						System.out.println("Choose a predicate:");
@@ -170,7 +175,7 @@ public class Controller {
 								predicate = obj -> true;
 						}
 						
-						streamOutput = new FilterOutput(outputStream, predicate);
+						streamOutput = new FilterOutput(streamOutput, predicate);
 						break;
 					case "5":
 						System.out.println("Applying...");
