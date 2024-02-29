@@ -10,6 +10,5 @@ abstract class OutputDecorator extends StreamOutput {
 		this.so = stream;
 	}
 	
-//	public abstract void write(Object o) throws IOException;
-	public abstract String decorate(String input);
+	public abstract void write(Object o) throws IOException;
 }

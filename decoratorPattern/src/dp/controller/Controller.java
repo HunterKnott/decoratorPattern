@@ -30,19 +30,16 @@ public class Controller {
 		}
 
 		@Override
-//		public void write(Object o) {
-		public String decorate(String input) {
-			StringBuilder sb = new StringBuilder();
+		public void write(Object o) {
 			try {
-//				String[] lines = o.toString().split("\\r?\\n");
-				String[] lines = input.split("\\r?\\n");
+				String text = o.toString();
+				String[] lines = text.split("\\r?\\n");
 				for (String line : lines) {
 					super.so.write("[" + line + "]\n");
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			return sb.toString();
 		}
 	}
 	
@@ -58,8 +55,9 @@ public class Controller {
 		@Override
 		public void write(Object o) {
 			try {
-				String[] lines = o.toString().split("\\r?\\n");
-				for (String line :  lines) {
+				String text = o.toString();
+				String[] lines = text.split("\\r?\\n");
+				for (String line : lines) {
 					super.so.write(String.format("%5d: %s\n", lineNumber++, line));
 				}
 			} catch (IOException e) {
@@ -93,6 +91,10 @@ public class Controller {
 		}
 	}
 	
+	public interface predicate {
+		public boolean execute(Object o);
+	}
+	
 	// NumberedOutput: this precedes each write with the current line number (1-based) right justified
 	// in a field of width 5, followed by a colon and a space. (Don’t add a newline.)
 	class FilterOutput extends OutputDecorator {
@@ -105,10 +107,6 @@ public class Controller {
 		public void write(Object o) {
 			
 		}
-	}
-	
-	public interface predicate {
-		public boolean execute(Object o);
 	}
 	
 	public void run() {
@@ -130,8 +128,7 @@ public class Controller {
 				
 				switch (choice) {
 					case "1":
-//						streamOutput = new BracketOutput(outputStream);
-						streamOutput.addDecorator(new BracketOutput(outputStream));
+						streamOutput = new BracketOutput(outputStream);
 						break;
 					case "2":
 						streamOutput = new NumberedOutput(outputStream);
