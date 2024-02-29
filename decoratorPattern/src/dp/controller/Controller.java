@@ -24,33 +24,33 @@ public class Controller {
 
 		public BracketOutput(StreamOutput streamOutput) {
 			super(so);
+			BracketOutput.so = streamOutput.getSink();
 		}
 
 		@Override
-		public void write(Object o) {
-			try {
-				String text = o.toString();
-				String[] lines = text.split("\\r?\\n");
-				for (String line : lines) {
-					super.so.write("[" + line + "]\n");
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
+	    public void write(Object o) {
+	        String text = o.toString();
+	        String[] lines = text.split("\\r?\\n");
+	        try {
+	            for (String line : lines) {
+	                so.write("[" + line + "]\n");
+	            }
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        }
+	    }
 	}
 	
 	// NumberedOutput: this precedes each write with the current line number (1-based) right justified
 	// in a field of width 5, followed by a colon and a space. (Don’t add a newline.)
 	class NumberedOutput extends OutputDecorator {
 		private static Writer so;
+		private int lineNumber = 1;
 		
 		public NumberedOutput(StreamOutput streamOutput) {
 			super(so);
+			NumberedOutput.so = streamOutput.getSink();
 		}
-
-		private int lineNumber = 1;
-		
 		
 		@Override
 		public void write(Object o) {
@@ -58,7 +58,7 @@ public class Controller {
 				String text = o.toString();
 				String[] lines = text.split("\\r?\\n");
 				for (String line : lines) {
-					super.so.write(String.format("%5d: %s\n", lineNumber++, line));
+					so.write(String.format("%5d: %s\n", lineNumber++, line));
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -125,10 +125,10 @@ public class Controller {
 		try (BufferedReader scanner = new BufferedReader(new InputStreamReader(System.in))) {
 			FileWriter outputStream = new FileWriter("output.dat");
 			
-	        StringWriter stringWriter = new StringWriter();
+//	        StringWriter stringWriter = new StringWriter();
 	        
-//	        StreamOutput streamOutput = new StreamOutput(outputStream);
-	        StreamOutput streamOutput = new StreamOutput(stringWriter);
+	        StreamOutput streamOutput = new StreamOutput(outputStream);
+//	        StreamOutput streamOutput = new StreamOutput(stringWriter);
 			
 			List<OutputDecorator> decorators = new ArrayList<>();
 			

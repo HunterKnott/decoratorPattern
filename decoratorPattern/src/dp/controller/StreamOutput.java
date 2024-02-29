@@ -7,6 +7,11 @@ class StreamOutput implements Output {
 	public StreamOutput(Writer stream) {
 		sink = stream;
 	}
+	
+	// Added later
+    public Writer getSink() {
+        return sink;
+    }
 
 	public void write(Object o) throws IOException {
 		try {
