@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 public class Controller {
 	private static String readFile(InputStream name) {
@@ -69,24 +70,25 @@ public class Controller {
 	// TeeOutput: writes to two streams at a time; the one it wraps, plus one it receives as a
 	// constructor argument
 	class TeeOutput extends OutputDecorator {
-		private final Writer secondStream;
+		private final Writer teeStream;
 		
-		public TeeOutput(Writer stream, String otherName) throws IOException {
+		public TeeOutput(Writer stream, Writer teeStream) throws IOException {
 			super(stream);
-			secondStream = new FileWriter(otherName);
+			this.teeStream = teeStream;
 		}
 		
 		@Override
-		public void write(Object o) {
+		public void write(Object o) throws IOException {
+			String text = o.toString();
 			try {
-				super.so.write(o.toString());
+				super.so.write(text);
+				super.so.write("\n");
+				teeStream.write(text);
+				teeStream.write("\n");
 			} catch (IOException e) {
 				e.printStackTrace();
-			}
-			try {
-				secondStream.write(o.toString());
-			} catch (IOException e) {
-				throw new RuntimeException(e);
+			} finally {
+				teeStream.close();
 			}
 		}
 	}
@@ -98,14 +100,23 @@ public class Controller {
 	// NumberedOutput: this precedes each write with the current line number (1-based) right justified
 	// in a field of width 5, followed by a colon and a space. (Don’t add a newline.)
 	class FilterOutput extends OutputDecorator {
+		private final Predicate<Object> predicate;
 		
-		public FilterOutput(Writer stream) {
+		public FilterOutput(Writer stream, Predicate<Object> predicate) {
 			super(stream);
+			this.predicate = predicate;
 		}
 		
 		@Override
 		public void write(Object o) {
-			
+			if (predicate.test(o)) {
+				try {
+					super.so.write(o.toString());
+					super.so.write("\n");
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			}
 		}
 	}
 	
@@ -136,10 +147,30 @@ public class Controller {
 					case "3":
 						System.out.print("Give a file name for output to go: ");
 						String newFile = scanner.readLine();
-						streamOutput = new TeeOutput(outputStream, newFile);
+						FileWriter teeFileWriter = new FileWriter(newFile);
+						streamOutput = new TeeOutput(outputStream, teeFileWriter);
 						break;
 					case "4":
-						streamOutput = new FilterOutput(outputStream);
+						System.out.println("Choose a predicate:");
+						System.out.println(" (1) Length greater than 10");
+						System.out.println(" (2) Contains 'Python'");
+						System.out.print("Enter a choice: ");
+						String predicateChoice = scanner.readLine();
+						
+						Predicate<Object> predicate;
+						switch (predicateChoice) {
+							case "1":
+								predicate = obj -> obj.toString().length() > 10;
+								break;
+							case "2":
+								predicate = obj -> obj.toString().contains("Python");
+								break;
+							default:
+								System.out.println("Invalid choice. Using default");
+								predicate = obj -> true;
+						}
+						
+						streamOutput = new FilterOutput(outputStream, predicate);
 						break;
 					case "5":
 						System.out.println("Applying...");
