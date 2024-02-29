@@ -21,10 +21,12 @@ public class Controller {
 	// BracketOutput: Surrounds each line with square brackets, and adds a newline to each.
 	class BracketOutput extends OutputDecorator {
 		private static Writer so;
+		private Output objectToDecorate;
 
 		public BracketOutput(StreamOutput streamOutput) {
 			super(so);
 			BracketOutput.so = streamOutput.getSink();
+			this.objectToDecorate = streamOutput;
 		}
 
 		@Override
@@ -33,7 +35,7 @@ public class Controller {
 	        String[] lines = text.split("\\r?\\n");
 	        try {
 	            for (String line : lines) {
-	                so.write("[" + line + "]\n");
+	                objectToDecorate.write("[" + line + "]\n");
 	            }
 	        } catch (IOException e) {
 	            e.printStackTrace();
@@ -45,11 +47,13 @@ public class Controller {
 	// in a field of width 5, followed by a colon and a space. (Don’t add a newline.)
 	class NumberedOutput extends OutputDecorator {
 		private static Writer so;
+		private Output objectToDecorate;
 		private int lineNumber = 1;
 		
 		public NumberedOutput(StreamOutput streamOutput) {
 			super(so);
 			NumberedOutput.so = streamOutput.getSink();
+			this.objectToDecorate = streamOutput;
 		}
 		
 		@Override
@@ -58,7 +62,7 @@ public class Controller {
 				String text = o.toString();
 				String[] lines = text.split("\\r?\\n");
 				for (String line : lines) {
-					so.write(String.format("%5d: %s\n", lineNumber++, line));
+					objectToDecorate.write(String.format("%5d: %s\n", lineNumber++, line));
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -70,19 +74,21 @@ public class Controller {
 	// constructor argument
 	class TeeOutput extends OutputDecorator {
 		private static Writer  so;
+		private Output objectToDecorate;
 		private final Writer teeStream;
 		
 		public TeeOutput(StreamOutput streamOutput, Writer teeStream) throws IOException {
 			super(so);
 			this.teeStream = teeStream;
+			this.objectToDecorate = streamOutput;
 		}
 		
 		@Override
 		public void write(Object o) throws IOException {
 			String text = o.toString();
 			try {
-				super.so.write(text);
-				super.so.write("\n");
+				objectToDecorate.write(text);
+				objectToDecorate.write("\n");
 				teeStream.write(text);
 				teeStream.write("\n");
 			} catch (IOException e) {
@@ -101,10 +107,12 @@ public class Controller {
 	// in a field of width 5, followed by a colon and a space. (Don’t add a newline.)
 	class FilterOutput extends OutputDecorator {
 		private static Writer so;
+		private Output objectToDecorate;
 		private final Predicate<Object> predicate;
 		
 		public FilterOutput(StreamOutput streamOutput, Predicate<Object> predicate) {
 			super(so);
+			this.objectToDecorate = streamOutput;
 			this.predicate = predicate;
 		}
 		
@@ -112,8 +120,8 @@ public class Controller {
 		public void write(Object o) {
 			if (predicate.test(o)) {
 				try {
-					super.so.write(o.toString());
-					super.so.write("\n");
+					objectToDecorate.write(o.toString());
+					objectToDecorate.write("\n");
 				} catch (IOException e) {
 					throw new RuntimeException(e);
 				}
