@@ -200,6 +200,7 @@ public class Controller {
 					case "5":
 						System.out.println("Applying...");
 						
+						System.out.println("Default readable file is named decorator.dat");
 						System.out.print("Enter a file to read: ");
 						String fileName = scanner.readLine();
 						
