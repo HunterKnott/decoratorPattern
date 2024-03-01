@@ -1,8 +1,6 @@
 package dp.controller;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Predicate;
+import java.util.function.Function;
 
 public class Controller {
 	private static String readFile(InputStream name) {
@@ -103,42 +101,41 @@ public class Controller {
 		public boolean execute(Object o);
 	}
 	
-	// NumberedOutput: this precedes each write with the current line number (1-based) right justified
-	// in a field of width 5, followed by a colon and a space. (Don’t add a newline.)
+	// FilterOutput: writes only those objects that satisfy a certain condition (unary predicate),
+	// received as a constructor parameter
 	class FilterOutput extends OutputDecorator {
 		private static Writer so;
 		private Output objectToDecorate;
-		private final Predicate<Object> predicate;
+		private Function<String, Boolean> test;
 		
-		public FilterOutput(StreamOutput streamOutput, Predicate<Object> predicate) {
+		public FilterOutput(StreamOutput streamOutput, Function<String, Boolean> predicate) {
 			super(so);
 			this.objectToDecorate = streamOutput;
-			this.predicate = predicate;
+			this.test = predicate;
 		}
 		
 		@Override
-		public void write(Object o) {
-			if (predicate.test(o)) {
-				try {
-					objectToDecorate.write(o.toString());
-					objectToDecorate.write("\n");
-				} catch (IOException e) {
-					throw new RuntimeException(e);
-				}
-			}
-		}
+	    public void write(Object o) {
+	        String text = o.toString();
+	        String[] lines = text.split("\\r?\\n");
+
+	        for (String line : lines) {
+	            if (test.apply(line)) {
+	                try {
+	                    objectToDecorate.write(line);
+	                    objectToDecorate.write("\n");
+	                } catch (IOException e) {
+	                    throw new RuntimeException(e);
+	                }
+	            }
+	        }
+	    }
 	}
 	
 	public void run() {
 		try (BufferedReader scanner = new BufferedReader(new InputStreamReader(System.in))) {
 			FileWriter outputStream = new FileWriter("output.dat");
-			
-//	        StringWriter stringWriter = new StringWriter();
-	        
 	        StreamOutput streamOutput = new StreamOutput(outputStream);
-//	        StreamOutput streamOutput = new StreamOutput(stringWriter);
-			
-			List<OutputDecorator> decorators = new ArrayList<>();
 			
 			while (true) {
 				System.out.println("Output Decorator Options:\n"
@@ -165,25 +162,38 @@ public class Controller {
 						break;
 					case "4":
 						System.out.println("Choose a predicate:");
-						System.out.println(" (1) Length greater than 10");
-						System.out.println(" (2) Contains 'Python'");
+						System.out.println(" (1) Line is not empty");
+						System.out.println(" (2) Line length is greater than 40");
+						System.out.println(" (3) Lines that have a given input");
+						System.out.println(" (4) Lines that have a # symbol");
 						System.out.print("Enter a choice: ");
 						String predicateChoice = scanner.readLine();
 						
-						Predicate<Object> predicate;
+						Function<String, Boolean> test;
 						switch (predicateChoice) {
 							case "1":
-								predicate = obj -> obj.toString().length() > 10;
+								test = str -> !str.isEmpty();
+								streamOutput = new FilterOutput(streamOutput, test);
 								break;
 							case "2":
-								predicate = obj -> obj.toString().contains("Python");
+								test = str -> str.length() > 40;
+								streamOutput = new FilterOutput(streamOutput, test);
+								break;
+							case "3":
+								System.out.print("Choose a word to search:");
+								String toFind = scanner.readLine();
+								test = str -> str.contains(toFind);
+								streamOutput = new FilterOutput(streamOutput, test);
+								break;
+							case "4":
+								test = str -> str.contains("#");
+								streamOutput = new FilterOutput(streamOutput, test);
 								break;
 							default:
 								System.out.println("Invalid choice. Using default");
-								predicate = obj -> true;
+								test = obj -> true;
+								streamOutput = new FilterOutput(streamOutput, test);
 						}
-						
-						streamOutput = new FilterOutput(streamOutput, predicate);
 						break;
 					case "5":
 						System.out.println("Applying...");
